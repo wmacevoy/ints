@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <algorithm>
 
 template <typename uint_type, uint32_t size, bool is_little = true>
 struct integer : std::array<uint_type,size> {
@@ -119,13 +120,17 @@ struct integer : std::array<uint_type,size> {
         }
     }
 
-    static void multiply(std::array<uint_type,2*size> &ans, 
+    template <uint32_t ans_size>
+    static void multiply(std::array<uint_type,ans_size> &ans, 
             const std::array<uint_type,size> &a, 
             const std::array<uint_type,size> &b) {
         uint32_t over[2*size]={0};
         if (is_little) {
-            for (int32_t i=0; i<size; ++i) {
-                for (int32_t j=0; j<size; ++j) {
+            int32_t ni=std::min(size,ans_size);
+            for (int32_t i=0; i<ni; ++i) 
+            {
+                int32_t nj=std::min(size,ans_size-i);
+                for (int32_t j=0; j<nj; ++j) {
                     int32_t k = i + j;
                     uint_type phi(0),plo(0);
                     multiply(phi,plo,a[i],b[j]);
@@ -139,8 +144,10 @@ struct integer : std::array<uint_type,size> {
                 over[i]=0;
             }
         } else {
-            for (int32_t i=size-1; i>=0 --i) {
-                for (int32_t j=size-1; j>=0; --j) {
+            int32_t ni=std::min(size,ans_size);
+            for (int32_t i=ni-1; i>=0 --i) {
+                int32_t nj=std::min(size,ans_size-i);
+                for (int32_t j=nj-1; j>=0; --j) {
                     int32_t k = i + j;
                     uint_type phi(0),plo(0);
                     multiply(phi,plo,a[i],b[j]);
