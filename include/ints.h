@@ -4,22 +4,23 @@
 #include <bit>
 #include <stdint.h>
 #include <algorithm>
+#include <arpa/inet.h>
 
 template <typename uint_type, uint32_t size, bool is_signed = true, bool is_little =  (htonl(1) != 1)>
 struct ints : std::array<uint_type,size> {
-    static const uint8_t uint_bits = 8*sizeof(uint_type);
-    static const uint_type uint_zeros = uint_type(0);
-    static const uint_type uint_ones = uint_type(~uint_type(0));
-    static const uint_type uint_sign_mask = is_signed ? (uint_type(1) << (uint_bits-1)) : 0;
-    static const uint_type uint_max = is_signed ? uint_sign_mask - 1 : ~uint_type(0);
-    static const uint_type uint_min = is_signed ? uint_sign_mask : 0;
+    static const uint8_t uint_bits;
+    static const uint_type uint_zeros;
+    static const uint_type uint_ones;
+    static const uint_type uint_sign_mask;
+    static const uint_type uint_max;
+    static const uint_type uint_min;
 
     static uint8_t is_zero(const uint_type &a) {
         return a == uint_zeros;
     }
 
     static uint8_t is_negative(const uint_type &a) {
-        return ((a & uint_sign_mask) != 0);
+        return (a & uint_sign_mask) != 0;
     }
 
     static uint8_t is_positive(const uint_type &a) {
@@ -35,11 +36,12 @@ struct ints : std::array<uint_type,size> {
     }
 
     static uint8_t add_with_carry(uint_type &a, const uint_type &b, uint8_t c) {
-        uint8_t na = is_negative(a);
-        uint8_t nb = is_negative(b);
+        uint_type bc = 
+        uint8_t na = a >> (8*sizeof(uint_type)-1);
+        uint8_t nb = uint_type(b+c) >> (8*sizeof(uint_type)-1);
         a += b + c;
-        bool ns = is_negative(a);
-        return (c & (b==uint_ones)) | ((ns^na) & ~(na ^ nb));
+        uint8_t ns = a >> (8*sizeof(uint_type)-1);
+        return (c & (b==uint_ones)) | ((ns^na) & (na ^ ~nb));
     }
 
     static void shift_left(uint_type &hi, uint_type &lo, uint8_t bits) {
@@ -173,3 +175,23 @@ struct ints : std::array<uint_type,size> {
         }
     }
 };
+
+#if 1
+template <typename uint_type, uint32_t size, bool is_signed, bool is_little>
+    const uint8_t ints<uint_type,size,is_signed,is_little>::uint_bits(8*sizeof(uint_type));
+
+template <typename uint_type, uint32_t size, bool is_signed, bool is_little>
+    const uint_type ints<uint_type,size,is_signed,is_little>::uint_zeros(uint_type(0));
+
+template <typename uint_type, uint32_t size, bool is_signed, bool is_little>
+    const uint_type ints<uint_type,size,is_signed,is_little>::uint_ones(uint_type(~uint_type(0)));
+
+template <typename uint_type, uint32_t size, bool is_signed, bool is_little>
+    const uint_type ints<uint_type,size,is_signed,is_little>::uint_sign_mask(is_signed ? (uint_type(1) << (sizeof(uint_type)*8-1)) : 0);
+
+template <typename uint_type, uint32_t size, bool is_signed, bool is_little>
+    const uint_type ints<uint_type,size,is_signed,is_little>::uint_max(is_signed ? ((uint_type(1) << (sizeof(uint_type)*8-1))-1) : (~uint_type(0)));
+
+template <typename uint_type, uint32_t size, bool is_signed, bool is_little>
+    const uint_type ints<uint_type,size,is_signed,is_little>::uint_min(is_signed ? ((uint_type(1) << (sizeof(uint_type)*8-1))) : 0);
+#endif
