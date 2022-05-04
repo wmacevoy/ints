@@ -1,27 +1,37 @@
 #pragma once
 
+#include <array>
+#include <bit>
 #include <stdint.h>
 #include <algorithm>
 
-template <typename uint_type, uint32_t size, bool is_little = true>
-struct integer : std::array<uint_type,size> {
+template <typename uint_type, uint32_t size, bool is_signed = true, bool is_little =  (htonl(1) != 1)>
+struct ints : std::array<uint_type,size> {
     static const uint8_t uint_bits = 8*sizeof(uint_type);
     static const uint_type uint_zeros = uint_type(0);
     static const uint_type uint_ones = uint_type(~uint_type(0));
-    static const uint_type uint_sign_mask = uint_type((uint_type(1) << (8*sizeof(uint_type)-1));
-    static const uint_type uint_max = uint_sign_mask - 1;
-    static const uint_type uint_min = uint_sign_mask;
+    static const uint_type uint_sign_mask = is_signed ? (uint_type(1) << (uint_bits-1)) : 0;
+    static const uint_type uint_max = is_signed ? uint_sign_mask - 1 : ~uint_type(0);
+    static const uint_type uint_min = is_signed ? uint_sign_mask : 0;
 
     static uint8_t is_zero(const uint_type &a) {
         return a == uint_zeros;
     }
 
     static uint8_t is_negative(const uint_type &a) {
-        return (a & uint_sign_mask) != 0;
+        return ((a & uint_sign_mask) != 0);
     }
 
     static uint8_t is_positive(const uint_type &a) {
-        return (a-1) < (uint_max-1);
+        return uint_type(a+uint_type(-1)) < uint_max;
+    }
+
+    static int8_t sign(const uint_type &a) {
+        uint8_t z = is_zero(a);
+        uint8_t n = is_negative(a);
+        uint8_t p = (!z) & (!n);
+
+        return -1*n+1*p;
     }
 
     static uint8_t add_with_carry(uint_type &a, const uint_type &b, uint8_t c) {
@@ -42,14 +52,14 @@ struct integer : std::array<uint_type,size> {
         hi = (hi >> bits);
     }
 
-    static void multiply(uint_type &hi, uint_type &lo, const type &a, const type &b) {
-        for (uint32_t i=0; i<sizeof(UINT); i += 32) {
-            for (uint32_t j=0; j<sizeof(UINT); j += 32) {
-                uint32_t k = i + j;
-                uint64 p64 = uint64_t(a >> i)*uint64_t(b >> j);
+    static void multiply(uint_type &hi, uint_type &lo, const uint_type &a, const uint_type &b) {
+        for (uint32_t i=0; i<sizeof(uint_type); i += 32) {
+            for (uint32_t j=0; j<sizeof(uint_type); j += 32) {
+                uint32_t k = (i + j) % uint_bits;
+                uint64_t p64 = uint64_t(a >> i)*uint64_t(b >> j);
                 uint_type plo(p64);
                 uint_type phi(p64 >> uint_bits);
-                shift_left(phi,plo,k % BITS);
+                shift_left(phi,plo,k);
                 hi += phi + add_with_carry(lo,plo,0);
             }
         }
@@ -145,7 +155,7 @@ struct integer : std::array<uint_type,size> {
             }
         } else {
             int32_t ni=std::min(size,ans_size);
-            for (int32_t i=ni-1; i>=0 --i) {
+            for (int32_t i=ni-1; i>=0; --i) {
                 int32_t nj=std::min(size,ans_size-i);
                 for (int32_t j=nj-1; j>=0; --j) {
                     int32_t k = i + j;
