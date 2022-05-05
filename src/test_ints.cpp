@@ -108,7 +108,7 @@ TEST(Ints,Shift1) {
       uint_type u(x);
 
       for (int pow2 = -1000; pow2 <= 1000; ++pow2) {
-	if (u == 256 && pow2 == 1) bp();
+	if (u == 128 && pow2 == 1) bp();
 
 	int_type si=ints<uint_type,1,1,1>::shift(i,pow2);
 	uint_type su=ints<uint_type,1,1,1>::shift(u,pow2);
@@ -117,13 +117,13 @@ TEST(Ints,Shift1) {
 
 	if (pow2 < 0) {
 	  if (pow2 > -8*sizeof(uint_type)) {
-	    ASSERT_EQ(u >> -pow2,su) << " u=" << u << " pow2=" << pow2;
+	    ASSERT_EQ(uint_type(u >> -pow2),su) << " u=" << u << " pow2=" << pow2;
 	  } else {
 	    ASSERT_EQ(0,su) << " u=" << u << " pow2=" << pow2;
 	  }
 	} else {
 	  if (pow2 < 8*sizeof(uint_type)) {
-	    ASSERT_EQ(u << pow2,su) << " u=" << u << " pow2=" << pow2;
+	    ASSERT_EQ(uint_type(u << pow2),su) << " u=" << u << " pow2=" << pow2;
 	  } else {
 	    ASSERT_EQ(0,su) << " u=" << u << " pow2=" << pow2;
 	  }
@@ -131,7 +131,41 @@ TEST(Ints,Shift1) {
       }
     }
 }
-	
+
+TEST(Ints,Shift1) {
+    typedef uint8_t uint_type;
+    typedef int8_t  int_type;
+
+    for (int x=std::numeric_limits<int_type>::min(); x<=std::numeric_limits<int_type>::max(); ++x) {
+    for (int y=std::numeric_limits<int_type>::min(); y<=std::numeric_limits<int_type>::max(); ++y) {      
+      uint_type hi(x);
+      uint_type lo(x);      
+
+      for (int pow2 = -1000; pow2 <= 1000; ++pow2) {
+	if (u == 128 && pow2 == 1) bp();
+
+	int_type si=ints<uint_type,1,1,1>::shift(i,pow2);
+	uint_type su=ints<uint_type,1,1,1>::shift(u,pow2);
+
+	ASSERT_EQ(uint_type(si),su);
+
+	if (pow2 < 0) {
+	  if (pow2 > -8*sizeof(uint_type)) {
+	    ASSERT_EQ(uint_type(u >> -pow2),su) << " u=" << u << " pow2=" << pow2;
+	  } else {
+	    ASSERT_EQ(0,su) << " u=" << u << " pow2=" << pow2;
+	  }
+	} else {
+	  if (pow2 < 8*sizeof(uint_type)) {
+	    ASSERT_EQ(uint_type(u << pow2),su) << " u=" << u << " pow2=" << pow2;
+	  } else {
+	    ASSERT_EQ(0,su) << " u=" << u << " pow2=" << pow2;
+	  }
+	}
+      }
+    }
+}
+
 	
 
 						   
