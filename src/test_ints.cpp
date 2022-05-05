@@ -63,8 +63,6 @@ TEST(Ints,Flags8) {
     ASSERT_EQ(count,exp2(8*sizeof(uint_type)));
 }
 
-void bp() {}
-
 TEST(Ints,AddWithCarry) {
     typedef uint8_t uint_type;
     typedef int8_t  int_type;
@@ -89,7 +87,6 @@ TEST(Ints,AddWithCarry) {
                         int32_t sum = int32_t(int_type(x))+int32_t(int_type(y))+int32_t(int_type(c));
                         uint32_t usum = uint32_t(uint_type(x))+uint32_t(uint_type(y))+uint32_t(uint_type(c));
                         uint8_t c0 = (usum >> (8*sizeof(int_type))) & 1;
-                        if (a == 128 && b == 128 && c == 0) bp();
                         uint8_t c1 = ints<uint_type,1,0,1>::add_with_carry(s,b,uint8_t(c));
                         ASSERT_EQ(uint_type(sum),s) << "s=" << uint32_t(s) << " a=" << uint32_t(a) << " b=" << uint32_t(b) << " c=" << uint32_t(c);
                         ASSERT_EQ(c0,c1) << "s=" << uint32_t(s) << " a=" << uint32_t(a) << " b=" << uint32_t(b) << " c=" << uint32_t(c);
@@ -99,3 +96,43 @@ TEST(Ints,AddWithCarry) {
         }
     }
 }
+
+void bp() {};
+
+TEST(Ints,Shift1) {
+    typedef uint8_t uint_type;
+    typedef int8_t  int_type;
+
+    for (int x=std::numeric_limits<int_type>::min(); x<=std::numeric_limits<int_type>::max(); ++x) {
+      int_type i(x);
+      uint_type u(x);
+
+      for (int pow2 = -1000; pow2 <= 1000; ++pow2) {
+	if (u == 256 && pow2 == 1) bp();
+
+	int_type si=ints<uint_type,1,1,1>::shift(i,pow2);
+	uint_type su=ints<uint_type,1,1,1>::shift(u,pow2);
+
+	ASSERT_EQ(uint_type(si),su);
+
+	if (pow2 < 0) {
+	  if (pow2 > -8*sizeof(uint_type)) {
+	    ASSERT_EQ(u >> -pow2,su) << " u=" << u << " pow2=" << pow2;
+	  } else {
+	    ASSERT_EQ(0,su) << " u=" << u << " pow2=" << pow2;
+	  }
+	} else {
+	  if (pow2 < 8*sizeof(uint_type)) {
+	    ASSERT_EQ(u << pow2,su) << " u=" << u << " pow2=" << pow2;
+	  } else {
+	    ASSERT_EQ(0,su) << " u=" << u << " pow2=" << pow2;
+	  }
+	}
+      }
+    }
+}
+	
+	
+
+						   
+

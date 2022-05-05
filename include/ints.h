@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <bit>
 #include <stdint.h>
 #include <algorithm>
 #include <arpa/inet.h>
@@ -24,7 +23,7 @@ struct ints : std::array<uint_type,size> {
     }
 
     static uint8_t is_positive(const uint_type &a) {
-        return uint_type(a+uint_type(-1)) < uint_max;
+      return uint_type(a+uint_type(-1)) < uint_max;
     }
 
     static int8_t sign(const uint_type &a) {
@@ -36,36 +35,53 @@ struct ints : std::array<uint_type,size> {
     }
 
     static uint8_t add_with_carry(uint_type &a, const uint_type &b, uint8_t c) {
-        uint_type bc = 
-        uint8_t na = a >> (8*sizeof(uint_type)-1);
-        uint8_t nb = uint_type(b+c) >> (8*sizeof(uint_type)-1);
-        a += b + c;
-        uint8_t ns = a >> (8*sizeof(uint_type)-1);
-        return (c & (b==uint_ones)) | ((ns^na) & (na ^ ~nb));
+      a += c;
+      c = c & (a==0);
+      uint8_t na = (a & (uint_type(1) << (sizeof(uint_type)*8-1))) != 0;
+      uint8_t nb = (b & (uint_type(1) << (sizeof(uint_type)*8-1))) != 0;
+      a += b;
+      uint8_t ns = (a & (uint_type(1) << (sizeof(uint_type)*8-1))) != 0;
+      return c|(na&nb)|((na^nb)&(~ns));
     }
 
-    static void shift_left(uint_type &hi, uint_type &lo, uint8_t bits) {
-        hi = (hi << bits) | (lo>>(uint_bits-bits));
-        lo = (lo << bits);
+  static uint_type shift(const uint_type &a, int32_t pow2) {
+    if (pow2 >= 0) {
+      if (pow2 < uint_bits) {
+	return a << pow2;	
+      } else {
+	return uint_type(0);
+      }
+    } else {
+      if (pow2 > -uint_bits) {
+	return a >> -pow2;
+      } else {
+	return uint_type(0);
+      }
     }
+  }
 
-    static void shift_right(uint_type &hi, uint_type &lo, uint8_t bits) {
-        lo = (lo >> bits) | (hi<<(uint_bits-bits));
-        hi = (hi >> bits);
+  static void shift(uint_type &hi, uint_type &lo, int32_t pow2) {
+    if (pow2 >= 0) {
+      hi = scale(hi,pow2) | scale(lo,uint_bits-pow2);
+      lo = scale(lo,pow2);
+    } else {
+      lo = scale(lo,pow2) | scale(hi,uint_bits+pow2);
+      hi = scale(hi,pow2);
     }
+  }
 
-    static void multiply(uint_type &hi, uint_type &lo, const uint_type &a, const uint_type &b) {
-        for (uint32_t i=0; i<sizeof(uint_type); i += 32) {
-            for (uint32_t j=0; j<sizeof(uint_type); j += 32) {
-                uint32_t k = (i + j) % uint_bits;
-                uint64_t p64 = uint64_t(a >> i)*uint64_t(b >> j);
-                uint_type plo(p64);
-                uint_type phi(p64 >> uint_bits);
-                shift_left(phi,plo,k);
-                hi += phi + add_with_carry(lo,plo,0);
-            }
-        }
+  static void multiply(uint_type &hi, uint_type &lo, const uint_type &a, const uint_type &b) {
+    for (uint32_t i=0; i<sizeof(uint_type); i += 32) {
+      for (uint32_t j=0; j<sizeof(uint_type); j += 32) {
+	uint32_t k = (i + j) % uint_bits;
+	uint64_t p64 = uint64_t(a >> i)*uint64_t(b >> j);
+	uint_type plo(p64);
+	uint_type phi(p64 >> uint_bits);
+	shift(phi,plo,k);
+	hi += phi + add_with_carry(lo,plo,0);
+      }
     }
+  }
 
     static void compliment(const std::array<uint_type,size> &a) {
         if (is_little) {
