@@ -4,9 +4,16 @@
 # https://stackoverflow.com/questions/59895/how-can-i-get-the-source-directory-of-a-bash-script-from-within-the-script-itsel
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
+if ! cd "$SCRIPT_DIR"
+then
+    echo "Could not change directory to script directory '$SCRIPT_DIR'"
+    exit 1
+fi
+echo "Working directory is $SCRIPT_DIR"
+
 # Try to convert for big-bash/msys/cygwin/wsl...
 winpath() {
-    if which -s cygpath  # git-bash/msys/cygwin
+    if which cygpath > /dev/null # git-bash/msys/cygwin
     then
        cygpath -w "$@"
     elif [ -r /proc/version ] && grep -q Microsoft /proc/version
@@ -17,12 +24,14 @@ winpath() {
     fi
 }
 
-if ! cd "$SCRIPT_DIR"
-then
-    echo "Could not change directory to script directory '$SCRIPT_DIR'"
-    exit 1
-fi
-echo "Working in '$SCRIPT_DIR'."
+# use the directory name as the tag name for docker
+DOCKER_TAG=$(basename "$SCRIPT_DIR")
+
+# Host (source) directory to mount in container
+HOST_DIR="$(winpath "$SCRIPT_DIR")"
+
+# Guest (target) directory where directoy is mounted
+GUEST_DIR=/app
 
 if [ ! -f Dockerfile ]
 then
@@ -30,8 +39,6 @@ then
     exit 1
 fi
 
-# use the directory name as the tag name for docker
-DOCKER_TAG=$(basename "$SCRIPT_DIR")
 
 echo "docker build '$SCRIPT_DIR/Dockerfile' with tag '$DOCKER_TAG'..."
 if docker build -t "$DOCKER_TAG" .
@@ -42,14 +49,7 @@ else
     exit 1
 fi
 
-# Host (source) directory to mount in container
-HOST_DIR="$(winpath "$SCRIPT_DIR")"
-
-# Guest (target) directory where directoy is mounted
-GUEST_DIR=/app
-
 echo "docker run '$DOCKER_TAG' (mounting host '$HOST_DIR' as '$GUEST_DIR'): " "$@"
-
 if [ $# -gt 0 ]
 then
     docker run -it --rm \
