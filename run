@@ -1,2 +1,10 @@
 #!/bin/bash
-docker build -t rdp . && docker run --rm rdp "$@"
+
+# https://stackoverflow.com/questions/59895/how-can-i-get-the-source-directory-of-a-bash-script-from-within-the-script-itsel
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+# use the directory name as the tag name for docker
+DOCKER_TAG=$(basename "$SCRIPT_DIR")
+
+docker build -t "$DOCKER_TAG" . && docker run -it --rm -v "$SCRIPT_DIR:/app" "$DOCKER_TAG" /bin/bash -i -c "$@"
+

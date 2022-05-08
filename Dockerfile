@@ -1,15 +1,7 @@
 FROM gcc:11.2.0
 
 RUN apt-get update && apt-get install -y cmake time build-essential gdb
-
 WORKDIR /app
-COPY ./Makefile ./Makefile.googletest /app
-RUN make googletest
+RUN echo  export PATH='"'/app/bin/$(uname -s)-$(uname -m):/app:'${PATH}''"' >> /root/.bashrc
 
-COPY test_all /app
-COPY src /app/src
-COPY include /app/include
-
-RUN make all
-ENV PATH="/app/bin:/app:${PATH}"
 CMD [ "/bin/bash" "-i" ]
