@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for t in bin/test_*
+for t in bin/$(uname -s)-$(uname -m)/test_*
 do
   if ! "$t"
   then
