@@ -1,5 +1,12 @@
 #!/bin/bash
 
+if ! make -k all
+then
+  fail="$fail build"
+else
+  pass="$pass build"
+fi
+
 for t in bin/$(uname -s)-$(uname -m)/test_*
 do
   if ! "$t"
