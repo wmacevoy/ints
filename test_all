@@ -1,24 +1,33 @@
 #!/bin/bash
 
-if ! make -k all
-then
-  fail="$fail build"
-else
-  pass="$pass build"
-fi
-
-for t in bin/$(uname -s)-$(uname -m)/test_*
+for src_test_name_ext in src/test_*
 do
-  if ! "$t"
+  test_name_ext=$(basename $src_test_name_ext)
+  test_name="${test_name_ext%.*}"
+  test_bin="bin/$(uname -s)-$(uname -m)/$test_name"
+  if ! make "$test_bin"
   then
-      fail="$fail $t"
+    fail="$fail make!$test_name"
   else
-      pass="$pass $t"
+    if [ -x "$test_bin" ] && ./$test_bin
+    then
+      pass="$pass $test_name"
+    else
+      fail="$fail $test_name"
+    fi
   fi
 done
-echo "passed tests:$pass"
+
+if [ "$pass" != "" ]
+then
+  echo "passed build&test:$pass"
+fi
 if [ "$fail" != "" ]
 then
-  echo "failed tests:$fail"
-  exit 1
+   echo "failed build|test:$fail"
+   exit 1
 fi
+
+echo "all built/test passed!"
+exit 0
+
