@@ -102,7 +102,7 @@ tmp/%.c.d: src/%.cpp
 	mkdir -p `dirname $@`
 	$(CC) $(CFLAGS) -MM -MT '$(patsubst src/%.cpp,tmp/%.cpp.o,$<)' $< > $@
 
-# use (and maybe update) dependency rules unless I am cleaning or makeing googletests
+# use (and maybe update) dependency rules unless I am cleaning or making googletests
 ifneq (clean,$(MAKECMDGOALS))
 ifneq (googletest,$(MAKECMDGOALS))
 -include $(patsubst src/%.cpp,tmp/%.cpp.d,$(CPP_PARTS) $(CPP_MAINS) $(CPP_TESTS))

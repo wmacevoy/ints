@@ -4,6 +4,16 @@
 
 #include "ints.h"
 
+#define STR(x) (([&]() { std::ostringstream oss; oss << x; return oss.str(); })())
+
+#define ATNV(n, v) << " && (" << #n << "==" << (v) << ")"
+#define AT(v) ATNV(v, v)
+#define ATI(v) ATNV(v, int32_t(v))
+#define ATU(v) ATNV(v, int32_t(v))
+#define ATB(v) << " && (" << ((v) ? "" : "! ") << #v ")"
+
+#define BP(ats) SCOPED_TRACE(STR(" if (true" ats << ") bp(" << __LINE__ << ");"))
+
 TEST(Ints, Constants8)
 {
   typedef uint8_t uint_type;
@@ -43,11 +53,10 @@ TEST(Ints, Flags8)
   typedef uint8_t uint_type;
   typedef int8_t int_type;
 
-  uint32_t count = 0;
-
   for (int x = std::numeric_limits<int_type>::min(); x <= std::numeric_limits<int_type>::max(); ++x)
   {
-    ++count;
+    BP(ATI(x));
+
     int_type i(x);
     uint_type u(x);
 
@@ -63,8 +72,6 @@ TEST(Ints, Flags8)
     EXPECT_EQ((ints<uint_type, 1, 1, 1>::sign(i)), int8_t(i < 0 ? -1 : (i == 0 ? 0 : 1))) << "i=" << int32_t(i);
     ASSERT_EQ((ints<uint_type, 1, 0, 1>::sign(u)), int8_t(u == 0 ? 0 : 1)) << "u=" << uint32_t(u);
   }
-
-  ASSERT_EQ(count, exp2(8 * sizeof(uint_type)));
 }
 
 TEST(Ints, AddWithCarry1)
@@ -75,10 +82,11 @@ TEST(Ints, AddWithCarry1)
   {
     for (int y = std::numeric_limits<int_type>::min(); y <= std::numeric_limits<int_type>::max(); ++y)
     {
-      for (int c = 0; c < 2; ++c)
+      for (bool c : {false, true})
       {
-        for (int s = 0; s < 2; ++s)
+        for (int s : {false, true})
         {
+          BP(ATI(x) ATI(y) ATB(c) ATB(s));
           if (s)
           {
             int_type s(x);
@@ -88,8 +96,8 @@ TEST(Ints, AddWithCarry1)
             uint32_t usum = uint32_t(uint_type(x)) + uint32_t(uint_type(y)) + uint32_t(uint_type(c));
             uint8_t c0 = (usum >> (8 * sizeof(int_type))) & 1;
             uint8_t c1 = ints<uint_type, 1, 1, 1>::add_with_carry((uint_type &)s, (const uint_type &)b, uint8_t(c));
-            ASSERT_EQ(int_type(sum), s) << "s=" << int32_t(s) << " a=" << int32_t(a) << " b=" << int32_t(b) << " c=" << int32_t(c);
-            ASSERT_EQ(c0, c1) << "s=" << int32_t(s) << " a=" << int32_t(a) << " b=" << int32_t(b) << " c=" << int32_t(c);
+            ASSERT_EQ(int_type(sum), s);
+            ASSERT_EQ(c0, c1);
           }
           else
           {
@@ -100,8 +108,8 @@ TEST(Ints, AddWithCarry1)
             uint32_t usum = uint32_t(uint_type(x)) + uint32_t(uint_type(y)) + uint32_t(uint_type(c));
             uint8_t c0 = (usum >> (8 * sizeof(int_type))) & 1;
             uint8_t c1 = ints<uint_type, 1, 0, 1>::add_with_carry(s, b, uint8_t(c));
-            ASSERT_EQ(uint_type(sum), s) << "s=" << uint32_t(s) << " a=" << uint32_t(a) << " b=" << uint32_t(b) << " c=" << uint32_t(c);
-            ASSERT_EQ(c0, c1) << "s=" << uint32_t(s) << " a=" << uint32_t(a) << " b=" << uint32_t(b) << " c=" << uint32_t(c);
+            ASSERT_EQ(uint_type(sum), s);
+            ASSERT_EQ(c0, c1);
           }
         }
       }
@@ -126,6 +134,8 @@ TEST(Ints, FShift)
 
     for (int pow2 = -1000; pow2 <= 1000; ++pow2)
     {
+      BP(ATI(x) ATI(pow2));
+
       int_type si = ints<uint_type, 1, 1, 1>::fshift(i, pow2);
       uint_type su = ints<uint_type, 1, 1, 1>::fshift(u, pow2);
 
@@ -135,22 +145,22 @@ TEST(Ints, FShift)
       {
         if (pow2 > -8 * sizeof(uint_type))
         {
-          ASSERT_EQ(uint_type(u >> -pow2), su) << " u=" << u << " pow2=" << pow2;
+          ASSERT_EQ(uint_type(u >> -pow2), su);
         }
         else
         {
-          ASSERT_EQ(0, su) << " u=" << u << " pow2=" << pow2;
+          ASSERT_EQ(0, su);
         }
       }
       else
       {
         if (pow2 < 8 * sizeof(uint_type))
         {
-          ASSERT_EQ(uint_type(u << pow2), su) << " u=" << u << " pow2=" << pow2;
+          ASSERT_EQ(uint_type(u << pow2), su);
         }
         else
         {
-          ASSERT_EQ(0, su) << " u=" << u << " pow2=" << pow2;
+          ASSERT_EQ(0, su);
         }
       }
     }
@@ -225,7 +235,8 @@ TEST(Ints, UUMultiply)
 
       uint2_type ab = uint2_type(a) * uint2_type(b);
 
-      ASSERT_EQ(ab, u) << " if (a==" << uint32_t(a) << " && b==" << uint32_t(b) << ") bp(__LINE__);";
+      ASSERT_EQ(ab, u)
+          << " if (a==" << uint32_t(a) << " && b==" << uint32_t(b) << ") bp(__LINE__);";
     }
   }
 }
@@ -249,6 +260,7 @@ struct wrap_base
   virtual uint_type get(uint32_t i) const = 0;
   virtual void set(uint32_t i, uint_type vi) = 0;
   virtual uint8_t add_with_carry(const ptr b, uint8_t c) = 0;
+  virtual ~wrap_base() {}
 };
 
 template <typename uint_type, uint32_t size, bool is_signed, bool is_little>
@@ -323,6 +335,7 @@ typename wrap_base<uint_type>::ptr wrapper(int size, bool is_signed, bool is_lit
       }
     }
   }
+  throw std::range_error("unsuported");
 }
 
 TEST(Ints, AddWithCarry2)
@@ -346,10 +359,16 @@ TEST(Ints, AddWithCarry2)
             {
               for (int is_little = 0; is_little < 2; ++is_little)
               {
+                BP(ATI(x) ATI(y) ATI(a) ATI(b) ATI(c) ATB(is_signed) ATB(is_little));
+                if (true && (x == -128) && (y == -128) && (a == -128) && (b == -128) && (c == 0) && (!is_signed) && (!is_little))
+                  bp(362);
                 uint32_t size = 2;
                 wrap_base<uint_type>::ptr wxy = wrapper<uint_type>(size, is_signed, is_little);
                 wrap_base<uint_type>::ptr wab = wrapper<uint_type>(size, is_signed, is_little);
                 wrap_base<uint_type>::ptr wsum = wrapper<uint_type>(size, is_signed, is_little);
+
+                uint2_type xy = uint2_type(uint2_type(uint_type(x) << (8 * sizeof(uint_type))) | uint_type(y));
+                uint2_type ab = uint2_type(uint2_type(uint_type(a) << (8 * sizeof(uint_type))) | uint_type(b));
 
                 wxy->set(0, x);
                 wxy->set(1, y);
@@ -358,10 +377,10 @@ TEST(Ints, AddWithCarry2)
                 wsum->set(0, 0);
                 wsum->set(1, 0);
 
-                uint8_t d = wxy->add_with_carry(wab, c);
+                uint8_t d = wxy->add_with_carry(wsum, c);
 
-                uint64_t ans = is_signed ?  int2_type(x << 8 * sizeof(uint_type) | y) +  int2_type(a << 8 * sizeof(uint_type) | b) +  int2_type(c)
-                                         : uint2_type(x << 8 * sizeof(uint_type) | y) + uint2_type(a << 8 * sizeof(uint_type) | b) + uint2_type(c);
+                uint64_t ans = is_signed ? int2_type(xy) + int2_type(ab)
+                                         : uint2_type(xy) + uint2_type(ab);
 
                 int hi = is_little ? 1 : 0;
                 int lo = is_little ? 0 : 1;

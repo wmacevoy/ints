@@ -2,14 +2,14 @@ FROM gcc:11.2.0
 
 RUN apt-get update && apt-get install -y cmake time build-essential gdb
 
-WORKDIR /usr/src/myapp
-COPY ./Makefile ./Makefile.googletest /usr/src/myapp/
+WORKDIR /app
+COPY ./Makefile ./Makefile.googletest /app
 RUN make googletest
 
-COPY ./test_all /usr/src/myapp/
-COPY ./src /usr/src/myapp/src/
-COPY ./include /usr/src/myapp/include/
+COPY test_all /app
+COPY src /app/src
+COPY include /app/include
 
 RUN make all
-ENV PATH="/usr/src/myapp/bin:${PATH}"
+ENV PATH="/app/bin:/app:${PATH}"
 CMD [ "/bin/bash" "-i" ]
