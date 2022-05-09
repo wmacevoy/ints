@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <array>
 #include <stdint.h>
 #include <algorithm>
@@ -246,9 +247,19 @@ struct ints : std::array<uint_type, size>
             }
         }
     }
+
+    friend std::ostream& operator<<(std::ostream& out, const ints &x) {
+      out << (is_signed ? "i" : "u") << 8*sizeof(uint_type) << "x" << size << (is_little ? "_le" : "_be") << "{";
+      for (uint32_t i = 0; i < size; ++i) {
+	if (i != 0) out << ",";
+	out << uint64_t(x.at(i));
+      }
+      out << "}";
+      return out;
+    }
 };
 
-#if 1
+
 template <typename uint_type, uint32_t size, bool is_signed, bool is_little>
 const uint8_t ints<uint_type, size, is_signed, is_little>::uint_bits(8 * sizeof(uint_type));
 
@@ -266,4 +277,3 @@ const uint_type ints<uint_type, size, is_signed, is_little>::uint_max(is_signed 
 
 template <typename uint_type, uint32_t size, bool is_signed, bool is_little>
 const uint_type ints<uint_type, size, is_signed, is_little>::uint_min(is_signed ? ((uint_type(1) << (sizeof(uint_type) * 8 - 1))) : 0);
-#endif

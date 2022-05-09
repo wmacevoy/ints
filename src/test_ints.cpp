@@ -260,7 +260,14 @@ struct wrap_base
   virtual uint_type get(uint32_t i) const = 0;
   virtual void set(uint32_t i, uint_type vi) = 0;
   virtual uint8_t add_with_carry(const ptr b, uint8_t c) = 0;
+  virtual void print(std::ostream &out) const=0;
   virtual ~wrap_base() {}
+
+  friend std::ostream& operator<<(std::ostream& out, const wrap_base &wb) {
+    wb.print(out);
+    return out;
+  }
+  
 };
 
 template <typename uint_type, uint32_t size, bool is_signed, bool is_little>
@@ -280,6 +287,9 @@ struct wrap : wrap_base<uint_type>
   {
     const type &bvalue = dynamic_cast<const wrap &>(*b).value;
     return type::add_with_carry(value, bvalue, c);
+  }
+  virtual void print(std::ostream &out) const {
+    out << value;
   }
 };
 
@@ -338,7 +348,11 @@ typename wrap_base<uint_type>::ptr wrapper(int size, bool is_signed, bool is_lit
   throw std::range_error("unsuported");
 }
 
-TEST(Ints, AddWithCarry2)
+#define U2(x,y) uint2_type(uint2_type(uint_type(x) << (8 * sizeof(uint_type))) | uint_type(y))
+#define LO2(xy) uint_type(xy)
+#define HI2(xy) uint_type(xy >> (8*sizeof(uint_type)))
+
+TEST(Ints, Rep2)
 {
   typedef uint8_t uint_type;
   typedef int8_t int_type;
@@ -349,9 +363,43 @@ TEST(Ints, AddWithCarry2)
   {
     for (int y = std::numeric_limits<int_type>::min(); y <= std::numeric_limits<int_type>::max(); ++y)
     {
-      for (int a = std::numeric_limits<int_type>::min(); a <= std::numeric_limits<int_type>::max(); ++a)
+      for (int is_signed = 0; is_signed < 2; ++is_signed)
+	{
+	  for (int is_little = 0; is_little < 2; ++is_little)
+	    {
+	      BP(ATI(x) ATI(y) ATB(is_signed) ATB(is_little));
+	      uint32_t size = 2;
+
+	      int hi = is_little ? 1 : 0;
+	      int lo = is_little ? 0 : 1;
+
+	      wrap_base<uint_type>::ptr wxy = wrapper<uint_type>(size, is_signed, is_little);
+	      wxy->set(hi,x);
+	      wxy->set(lo,y);
+	      uint2_type xy = U2(x,y);
+
+	      ASSERT_EQ(uint_type(wxy->get(lo)),LO2(xy));
+	      ASSERT_EQ(uint_type(wxy->get(hi)),HI2(xy));
+	    }
+	}
+    }
+  }
+}
+					 
+TEST(Ints, AddWithCarry2)
+{
+  typedef uint8_t uint_type;
+  typedef int8_t int_type;
+  typedef uint16_t uint2_type;
+  typedef int16_t int2_type;
+
+  for (int x : { -128,-127,-126, -65,-64,-63, -33,-32,-31, -17,-16,-15, -3,-2,-1,0,1,2,3, 15,16,17, 31,32,33, 63,64,65, 126,127 })
+  {
+    for (int y : { -128,-127,-126, -65,-64,-63, -33,-32,-31, -17,-16,-15, -3,-2,-1,0,1,2,3, 15,16,17, 31,32,33, 63,64,65, 126,127 })
+    {
+      for (int a : { -128,-127,-126, -65,-64,-63, -33,-32,-31, -17,-16,-15, -3,-2,-1,0,1,2,3, 15,16,17, 31,32,33, 63,64,65, 126,127 })
       {
-        for (int b = std::numeric_limits<int_type>::min(); b <= std::numeric_limits<int_type>::max(); ++b)
+        for (int b : { -128,-127,-126, -65,-64,-63, -33,-32,-31, -17,-16,-15, -3,-2,-1,0,1,2,3, 15,16,17, 31,32,33, 63,64,65, 126,127 })
         {
           for (int c = 0; c < 2; ++c)
           {
@@ -360,34 +408,36 @@ TEST(Ints, AddWithCarry2)
               for (int is_little = 0; is_little < 2; ++is_little)
               {
                 BP(ATI(x) ATI(y) ATI(a) ATI(b) ATI(c) ATB(is_signed) ATB(is_little));
-                if (true && (x == -128) && (y == -128) && (a == -128) && (b == -128) && (c == 0) && (!is_signed) && (!is_little))
-                  bp(362);
                 uint32_t size = 2;
+
+                int hi = is_little ? 1 : 0;
+                int lo = is_little ? 0 : 1;
+		
                 wrap_base<uint_type>::ptr wxy = wrapper<uint_type>(size, is_signed, is_little);
                 wrap_base<uint_type>::ptr wab = wrapper<uint_type>(size, is_signed, is_little);
                 wrap_base<uint_type>::ptr wsum = wrapper<uint_type>(size, is_signed, is_little);
 
-                uint2_type xy = uint2_type(uint2_type(uint_type(x) << (8 * sizeof(uint_type))) | uint_type(y));
-                uint2_type ab = uint2_type(uint2_type(uint_type(a) << (8 * sizeof(uint_type))) | uint_type(b));
+                uint2_type xy = U2(x,y);
+                uint2_type ab = U2(a,b);
 
-                wxy->set(0, x);
-                wxy->set(1, y);
-                wab->set(0, a);
-                wab->set(1, b);
-                wsum->set(0, 0);
-                wsum->set(1, 0);
+                wxy->set(hi, x);
+                wxy->set(lo, y);
+                wab->set(hi, a);
+                wab->set(lo, b);
+                wsum->set(hi, x);
+                wsum->set(lo, y);
 
-                uint8_t d = wxy->add_with_carry(wsum, c);
+                uint64_t ans = xy + ab + uint2_type(c);
 
-                uint64_t ans = is_signed ? int2_type(xy) + int2_type(ab)
-                                         : uint2_type(xy) + uint2_type(ab);
+		uint_type ans_lo = LO2(ans);
+		uint_type ans_hi = HI2(ans);
+		uint_type ans_c  = 1U & uint_type(ans >> (16 * sizeof(uint_type)));
 
-                int hi = is_little ? 1 : 0;
-                int lo = is_little ? 0 : 1;
+                uint8_t d = wsum->add_with_carry(wab, c);
 
-                ASSERT_EQ(wsum->get(lo), uint_type(ans));
-                ASSERT_EQ(wsum->get(hi), uint_type(ans >> 8 * sizeof(uint_type)));
-                ASSERT_EQ(d, (ans >> 16 * sizeof(uint_type)) & 1);
+                ASSERT_EQ(wsum->get(lo), ans_lo);
+                ASSERT_EQ(wsum->get(hi), ans_hi);
+		ASSERT_EQ(d, ans_c);
               }
             }
           }

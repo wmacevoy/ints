@@ -38,11 +38,14 @@ BIN := bin/$(OS_ARCH)
 TMP := tmp/$(OS_ARCH)
 LIB := lib/$(OS_ARCH)
 
-ifeq "$(UNAME_S)" "Darwin"
-CXXSTD:=gnu++2a
-else
-CXXSTD:=gnu++20
-endif
+#ifeq "$(UNAME_S)" "Darwin"
+#CXXSTD:=gnu++2a
+#else
+#CXXSTD:=gnu++20
+#endif
+
+# CXXSTD := $(shell if g++ --std=c++20 --version > /dev/null; then echo c++20; else echo c++2a; fi)
+CXXSTD := c++2a
 
 CXXFLAGS:=-pthread -Iinclude -g -std=${CXXSTD} -fPIC
 
